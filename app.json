@@ -1,0 +1,132 @@
+{
+  "id": "com.local.scishare-coffee",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": ["local"],
+  "name": { "en": "Scishare Coffee", "ru": "Scishare Coffee" },
+  "description": {
+    "en": "Private local control for Scishare Smart Capsule Coffee Machine S1102.",
+    "ru": "Локальное управление кофемашиной Scishare Smart Capsule Coffee Machine S1102."
+  },
+  "category": ["appliances"],
+  "icon": "/assets/icon.svg",
+  "images": {
+    "large": "/assets/images/large.png",
+    "small": "/assets/images/small.png"
+  },
+  "brandColor": "#5B3A29",
+  "author": { "name": "Local Homey user" },
+  "flow": {
+    "triggers": [
+      {
+        "id": "water_empty",
+        "title": { "en": "The coffee machine has run out of water", "ru": "В кофемашине закончилась вода" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }
+        ]
+      },
+      {
+        "id": "operation_completed",
+        "title": { "en": "Your drink or hot water is ready", "ru": "Напиток или горячая вода готовы" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }
+        ],
+        "tokens": [
+          { "name": "operation", "type": "string", "title": { "en": "Operation", "ru": "Операция" } },
+          { "name": "message", "type": "string", "title": { "en": "Ready message", "ru": "Сообщение о готовности" } }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "brew_espresso",
+        "title": { "en": "Brew espresso", "ru": "Приготовить эспрессо" },
+        "titleFormatted": { "en": "Brew [[amount]] ml espresso at [[temperature]] °C", "ru": "Приготовить эспрессо [[amount]] мл, [[temperature]] °C" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } },
+          { "type": "number", "name": "amount", "title": { "en": "Amount (ml)", "ru": "Объём (мл)" }, "min": 10, "max": 200, "step": 1 },
+          { "type": "number", "name": "temperature", "title": { "en": "Temperature (°C)", "ru": "Температура (°C)" }, "min": 40, "max": 100, "step": 1 }
+        ]
+      },
+      {
+        "id": "brew_americano",
+        "title": { "en": "Brew americano", "ru": "Приготовить американо" },
+        "titleFormatted": { "en": "Brew [[total_amount]] ml americano: [[coffee_amount]] ml coffee at [[temperature]] °C", "ru": "Приготовить американо [[total_amount]] мл: кофе [[coffee_amount]] мл, [[temperature]] °C" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } },
+          { "type": "number", "name": "total_amount", "title": { "en": "Total drink volume (ml)", "ru": "Общий объём напитка (мл)" }, "min": 20, "max": 400, "step": 1 },
+          { "type": "number", "name": "coffee_amount", "title": { "en": "Coffee amount (ml)", "ru": "Объём кофе (мл)" }, "min": 10, "max": 200, "step": 1 },
+          { "type": "number", "name": "temperature", "title": { "en": "Temperature (°C)", "ru": "Температура (°C)" }, "min": 40, "max": 100, "step": 1 }
+        ]
+      },
+      {
+        "id": "boil_water",
+        "title": { "en": "Dispense hot water", "ru": "Подать горячую воду" },
+        "titleFormatted": { "en": "Dispense [[amount]] ml water at [[temperature]] °C", "ru": "Подать [[amount]] мл воды, [[temperature]] °C" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } },
+          { "type": "number", "name": "amount", "title": { "en": "Amount (ml)", "ru": "Объём (мл)" }, "min": 10, "max": 400, "step": 1 },
+          { "type": "number", "name": "temperature", "title": { "en": "Temperature (°C)", "ru": "Температура (°C)" }, "min": 40, "max": 100, "step": 1 }
+        ]
+      },
+      {
+        "id": "preheat",
+        "title": { "en": "Preheat", "ru": "Начать нагрев" },
+        "titleFormatted": { "en": "Preheat to [[temperature]] °C", "ru": "Нагреть до [[temperature]] °C" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } },
+          { "type": "number", "name": "temperature", "title": { "en": "Temperature (°C)", "ru": "Температура (°C)" }, "min": 40, "max": 100, "step": 1 }
+        ]
+      },
+      {
+        "id": "stop_preheat",
+        "title": { "en": "Stop preheating", "ru": "Остановить нагрев" },
+        "titleFormatted": { "en": "Stop preheating", "ru": "Остановить нагрев" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }
+        ]
+      },
+      {
+        "id": "refresh_status",
+        "title": { "en": "Refresh machine status", "ru": "Обновить состояние кофемашины" },
+        "titleFormatted": { "en": "Refresh machine status", "ru": "Обновить состояние кофемашины" },
+        "args": [
+          { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "id": "scishare_s1102",
+      "name": { "en": "Scishare Coffee Machine S1102", "ru": "Кофемашина Scishare S1102" },
+      "class": "coffeemachine",
+      "icon": "/drivers/scishare_s1102/assets/icon.svg",
+      "connectivity": ["lan"],
+      "images": {
+        "large": "/drivers/scishare_s1102/assets/images/large.png",
+        "small": "/drivers/scishare_s1102/assets/images/small.png"
+      },
+      "capabilities": ["onoff", "alarm_generic", "button.espresso", "button.americano", "button.hot_water"],
+      "capabilitiesOptions": {
+        "button.espresso": { "title": { "en": "Espresso", "ru": "Эспрессо" } },
+        "button.americano": { "title": { "en": "Americano", "ru": "Американо" } },
+        "button.hot_water": { "title": { "en": "Hot water", "ru": "Горячая вода" } }
+      },
+      "pair": [{ "id": "scishare_connection" }],
+      "settings": [
+        { "id": "ip", "type": "text", "label": { "en": "IP address", "ru": "IP-адрес" }, "hint": { "en": "Reserve the address in your router.", "ru": "Закрепите адрес в роутере." }, "value": "" },
+        { "id": "token", "type": "text", "label": { "en": "MiIO token", "ru": "MiIO token" }, "hint": { "en": "32 hexadecimal characters. Keep it private.", "ru": "32 шестнадцатеричных символа. Не публикуйте его." }, "value": "" },
+        { "id": "poll_interval", "type": "number", "label": { "en": "Status refresh (seconds)", "ru": "Обновление статуса (сек.)" }, "hint": { "en": "10–300 seconds. Default: 20.", "ru": "10–300 секунд. По умолчанию: 20." }, "value": 20 },
+        { "id": "espresso_amount", "type": "number", "label": { "en": "Espresso volume (ml)", "ru": "Эспрессо: объём (мл)" }, "value": 40 },
+        { "id": "espresso_temperature", "type": "number", "label": { "en": "Espresso temperature (°C)", "ru": "Эспрессо: температура (°C)" }, "value": 90 },
+        { "id": "americano_total_amount", "type": "number", "label": { "en": "Americano total volume (ml)", "ru": "Американо: общий объём (мл)" }, "value": 120 },
+        { "id": "americano_coffee_amount", "type": "number", "label": { "en": "Americano coffee volume (ml)", "ru": "Американо: объём кофе (мл)" }, "value": 40 },
+        { "id": "americano_temperature", "type": "number", "label": { "en": "Americano temperature (°C)", "ru": "Американо: температура (°C)" }, "value": 90 },
+        { "id": "hot_water_amount", "type": "number", "label": { "en": "Hot water volume (ml)", "ru": "Горячая вода: объём (мл)" }, "value": 200 },
+        { "id": "hot_water_temperature", "type": "number", "label": { "en": "Hot water temperature (°C)", "ru": "Горячая вода: температура (°C)" }, "value": 90 }
+      ]
+    }
+  ]
+}

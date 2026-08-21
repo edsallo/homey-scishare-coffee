@@ -1,0 +1,15 @@
+{
+  "name": "com.local.scishare-coffee",
+  "version": "0.1.0",
+  "description": "Local Scishare S1102 coffee machine control for Homey",
+  "main": "app.js",
+  "private": false,
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "homey": "^3.0.0"
+  },
+  "scripts": {
+    "lint": "node --check app.js && node --check drivers/scishare_s1102/driver.js && node --check drivers/scishare_s1102/device.js"
+  }
+}
