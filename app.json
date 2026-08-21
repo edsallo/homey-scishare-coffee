@@ -13,7 +13,8 @@
   "icon": "/assets/icon.svg",
   "images": {
     "large": "/assets/images/large.png",
-    "small": "/assets/images/small.png"
+    "small": "/assets/images/small.png",
+    "xlarge": "/assets/images/xlarge.png"
   },
   "brandColor": "#5B3A29",
   "author": { "name": "Local Homey user" },
@@ -106,7 +107,8 @@
       "connectivity": ["lan"],
       "images": {
         "large": "/drivers/scishare_s1102/assets/images/large.png",
-        "small": "/drivers/scishare_s1102/assets/images/small.png"
+        "small": "/drivers/scishare_s1102/assets/images/small.png",
+        "xlarge": "/drivers/scishare_s1102/assets/images/xlarge.png"
       },
       "capabilities": ["onoff", "alarm_generic", "button.espresso", "button.americano", "button.hot_water"],
       "capabilitiesOptions": {
