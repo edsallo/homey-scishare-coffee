@@ -4,6 +4,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/images/xlarge.png" alt="Кофемашина Scishare S1102" width="500">
+</p>
+
 ## Русская версия
 
 Локальное управление кофемашиной **Scishare Smart Capsule Coffee Machine S1102** из Homey Pro. Приложение работает напрямую с кофемашиной по локальной сети через протокол MiIO UDP: после добавления не требует Xiaomi Cloud или постоянного доступа в интернет.
