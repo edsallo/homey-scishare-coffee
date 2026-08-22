@@ -192,11 +192,11 @@ class ScishareCoffeeDevice extends Homey.Device {
     }
   }
 
-  async _startBrewWorkflow(method, params, label, temperature, operation) {
+  async _startBrewWorkflow(method, params, label, operation) {
     if (this._brewWorkflow) throw new Error('Уже ожидается готовность кофемашины к другому напитку');
     this._brewWorkflow = {
-      method, params, label, temperature, operation,
-      deadline: Date.now() + READY_TIMEOUT_MS, turnedOn: false, preheatRequested: false,
+      method, params, label, operation,
+      deadline: Date.now() + READY_TIMEOUT_MS, turnedOn: false,
     };
     try {
       await this._advanceBrewWorkflow();
@@ -238,11 +238,39 @@ class ScishareCoffeeDevice extends Homey.Device {
     if (code === 1 && !workflow.turnedOn) {
       await this._run('Machine_ON', [], 'Включение кофемашины');
       workflow.turnedOn = true;
+      // Do not wait for the regular two-second workflow poll here. Send the
+      // requested operation at the first post-boot idle state; S1102 may
+      // still queue it behind its firmware-controlled initial warm-up.
+      const postPowerOnCode = await this._readStatus();
+      if ([2, 4, 5, 7].includes(postPowerOnCode)) {
+        await this._run(workflow.method, workflow.params, workflow.label);
+        this._activeOperation = {
+          type: workflow.operation,
+          name: OPERATION_NAMES[workflow.operation],
+          seenPreparing: false,
+          acceptedAt: Date.now(),
+        };
+        this.startActivePolling();
+        this._clearBrewWorkflow();
+        await this.unsetWarning();
+        return;
+      }
     }
 
-    if ([2, 4, 7].includes(code) && !workflow.preheatRequested) {
-      await this._run('Boiler_Preheating_Set', [workflow.temperature], 'Нагрев кофемашины');
-      workflow.preheatRequested = true;
+    // The drink/water command includes its target temperature. A separate
+    // Boiler_Preheating_Set command is deliberately not sent beforehand.
+    if ([2, 4, 7].includes(code)) {
+      await this._run(workflow.method, workflow.params, workflow.label);
+      this._activeOperation = {
+        type: workflow.operation,
+        name: OPERATION_NAMES[workflow.operation],
+        seenPreparing: false,
+        acceptedAt: Date.now(),
+      };
+      this.startActivePolling();
+      this._clearBrewWorkflow();
+      await this.unsetWarning();
+      return;
     }
 
     this._brewTimer = this.homey.setTimeout(() => {
@@ -269,7 +297,7 @@ class ScishareCoffeeDevice extends Homey.Device {
     const selectedTemperature = number(temperature, 40, 100, 'Температура');
     return this._startBrewWorkflow('Espresso_Coffee', [
       number(amount, 10, 200, 'Объём'), selectedTemperature,
-    ], 'Приготовление эспрессо', selectedTemperature, 'espresso');
+    ], 'Приготовление эспрессо', 'espresso');
   }
 
   async brewAmericano(totalAmount, coffeeAmount, temperature) {
@@ -280,14 +308,14 @@ class ScishareCoffeeDevice extends Homey.Device {
     const selectedTemperature = number(temperature, 40, 100, 'Температура');
     return this._startBrewWorkflow('Americano_Coffee', [
       water, selectedTemperature, coffee, selectedTemperature,
-    ], 'Приготовление американо', selectedTemperature, 'americano');
+    ], 'Приготовление американо', 'americano');
   }
 
   async boilWater(amount, temperature) {
     const selectedTemperature = number(temperature, 40, 100, 'Температура');
     return this._startBrewWorkflow('Hot_Wate', [
       number(amount, 10, 400, 'Объём'), selectedTemperature,
-    ], 'Подача горячей воды', selectedTemperature, 'hot_water');
+    ], 'Подача горячей воды', 'hot_water');
   }
 
   async preheat(temperature) {
