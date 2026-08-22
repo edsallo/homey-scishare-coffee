@@ -1,6 +1,6 @@
 {
   "name": "com.local.scishare-coffee",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local Scishare S1102 coffee machine control for Homey",
   "main": "app.js",
   "private": false,

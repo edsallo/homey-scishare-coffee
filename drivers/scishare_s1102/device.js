@@ -3,36 +3,52 @@
 const Homey = require('homey');
 const MiioClient = require('../../lib/miio-client');
 
-const STATUS = {
-  1: 'Выключена', 2: 'Включена', 3: 'Самопроверка', 4: 'Нагрев остановлен',
-  5: 'Готова к приготовлению', 6: 'Удаление накипи остановлено', 7: 'Ожидание',
-  8: 'Нагрев', 201: 'Приготовление', 203: 'Нет воды',
+const STATUS_KEYS = {
+  1: 'status.off', 2: 'status.on', 3: 'status.self_check', 4: 'status.preheat_stopped',
+  5: 'status.ready', 6: 'status.descale_stopped', 7: 'status.waiting',
+  8: 'status.heating', 201: 'status.brewing', 203: 'status.no_water',
 };
 const READY_TIMEOUT_MS = 120000;
 const READY_POLL_MS = 2000;
 const ACTIVE_POLL_MS = 2000;
 const ACTIVE_POLL_DURATION_MS = 120000;
-const OPERATION_NAMES = {
-  espresso: 'Эспрессо',
-  americano: 'Амерек+ано',
-  hot_water: 'Горячая вода',
+const OPERATION_NAME_KEYS = {
+  espresso: 'operation.espresso_name',
+  americano: 'operation.americano_name',
+  hot_water: 'operation.hot_water_name',
 };
 
-const OPERATION_READY_MESSAGES = {
-  espresso: 'Ваш эспрессо готов!',
-  americano: 'Ваш амерек+ано готов!',
-  hot_water: 'Ваша горячая вода уже в чашке!',
+const OPERATION_READY_MESSAGE_KEYS = {
+  espresso: 'ready_message.espresso',
+  americano: 'ready_message.americano',
+  hot_water: 'ready_message.hot_water',
 };
 
-function number(value, min, max, title) {
+function number(value, min, max, title, translate) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`${title}: допустимо от ${min} до ${max}`);
+    throw new Error(translate('validation.range', { title: translate(title), min, max }));
   }
   return parsed;
 }
 
 class ScishareCoffeeDevice extends Homey.Device {
+  _t(key, tokens) {
+    return this.homey.__(key, tokens);
+  }
+
+  _statusText(code) {
+    return this._t(STATUS_KEYS[code] || 'status.unknown', { code });
+  }
+
+  _operationName(type) {
+    return this._t(OPERATION_NAME_KEYS[type]);
+  }
+
+  _readyMessage(type) {
+    return this._t(OPERATION_READY_MESSAGE_KEYS[type]);
+  }
+
   async onInit() {
     this._requestChain = Promise.resolve();
     this._polling = false;
@@ -81,7 +97,7 @@ class ScishareCoffeeDevice extends Homey.Device {
       clearInterval(this.activePollTimer);
       this.activePollTimer = null;
       if (this._activeOperation) {
-        this.setWarning('Не удалось подтвердить завершение приготовления за 2 минуты').catch(error => this.error(error));
+        this.setWarning(this._t('error.completion_unconfirmed')).catch(error => this.error(error));
         this._activeOperation = null;
       }
     }, ACTIVE_POLL_DURATION_MS);
@@ -111,8 +127,8 @@ class ScishareCoffeeDevice extends Homey.Device {
   _settings(overrides = {}) {
     const ip = String(overrides.ip ?? this.getSetting('ip') ?? '').trim();
     const token = String(overrides.token ?? this.getSetting('token') ?? '').trim().toLowerCase();
-    if (!/^(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(ip)) throw new Error('Не задан корректный IPv4-адрес кофемашины');
-    if (!/^[a-f\d]{32}$/i.test(token)) throw new Error('Не задан корректный MiIO token');
+    if (!/^(?:25[0-5]|2[0-4]\d|1?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(ip)) throw new Error(this._t('validation.missing_ip'));
+    if (!/^[a-f\d]{32}$/i.test(token)) throw new Error(this._t('validation.missing_token'));
     return { ip, token };
   }
 
@@ -139,9 +155,9 @@ class ScishareCoffeeDevice extends Homey.Device {
     try {
       const code = await this._readStatus();
       await this.setAvailable();
-      return { code, text: STATUS[code] || 'Неизвестное состояние' };
+      return { code, text: this._statusText(code) };
     } catch (error) {
-      await this.setUnavailable(`Кофемашина недоступна: ${error.message}`);
+      await this.setUnavailable(this._t('error.unavailable', { message: error.message }));
       throw error;
     } finally {
       this._polling = false;
@@ -154,7 +170,7 @@ class ScishareCoffeeDevice extends Homey.Device {
     await this.setCapabilityValue('onoff', code !== 1 && Number.isFinite(code));
     await this.setCapabilityValue('alarm_generic', code === 203);
     await this.setStoreValue('status_code', code);
-    await this.setStoreValue('status_text', STATUS[code] || `Неизвестное состояние (${code})`);
+    await this.setStoreValue('status_text', this._statusText(code));
     if (code === 203 && !this._waterEmptyReported) {
       await this.homey.app.waterEmptyTrigger.trigger(this);
       this._waterEmptyReported = true;
@@ -187,13 +203,13 @@ class ScishareCoffeeDevice extends Homey.Device {
       this.stopActivePolling();
       await this.homey.app.operationCompletedTrigger.trigger(this, {
         operation: operation.name,
-        message: OPERATION_READY_MESSAGES[operation.type],
+        message: this._readyMessage(operation.type),
       });
     }
   }
 
   async _startBrewWorkflow(method, params, label, operation) {
-    if (this._brewWorkflow) throw new Error('Уже ожидается готовность кофемашины к другому напитку');
+    if (this._brewWorkflow) throw new Error(this._t('error.workflow_busy'));
     this._brewWorkflow = {
       method, params, label, operation,
       deadline: Date.now() + READY_TIMEOUT_MS, turnedOn: false,
@@ -216,16 +232,16 @@ class ScishareCoffeeDevice extends Homey.Device {
   async _advanceBrewWorkflow() {
     const workflow = this._brewWorkflow;
     if (!workflow) return;
-    if (Date.now() >= workflow.deadline) throw new Error('Кофемашина не стала готова к приготовлению за 2 минуты');
+    if (Date.now() >= workflow.deadline) throw new Error(this._t('error.workflow_timeout'));
 
     const code = await this._readStatus();
-    if (code === 203) throw new Error('Приготовление не начато: в кофемашине нет воды');
-    if (code === 201) throw new Error('Приготовление не начато: кофемашина уже готовит напиток');
+    if (code === 203) throw new Error(this._t('error.no_water'));
+    if (code === 201) throw new Error(this._t('error.already_brewing'));
     if (code === 5) {
       await this._run(workflow.method, workflow.params, workflow.label);
       this._activeOperation = {
         type: workflow.operation,
-        name: OPERATION_NAMES[workflow.operation],
+        name: this._operationName(workflow.operation),
         seenPreparing: false,
         acceptedAt: Date.now(),
       };
@@ -236,7 +252,7 @@ class ScishareCoffeeDevice extends Homey.Device {
     }
 
     if (code === 1 && !workflow.turnedOn) {
-      await this._run('Machine_ON', [], 'Включение кофемашины');
+      await this._run('Machine_ON', [], this._t('operation.power_on'));
       workflow.turnedOn = true;
       // Do not wait for the regular two-second workflow poll here. Send the
       // requested operation at the first post-boot idle state; S1102 may
@@ -246,7 +262,7 @@ class ScishareCoffeeDevice extends Homey.Device {
         await this._run(workflow.method, workflow.params, workflow.label);
         this._activeOperation = {
           type: workflow.operation,
-          name: OPERATION_NAMES[workflow.operation],
+          name: this._operationName(workflow.operation),
           seenPreparing: false,
           acceptedAt: Date.now(),
         };
@@ -263,7 +279,7 @@ class ScishareCoffeeDevice extends Homey.Device {
       await this._run(workflow.method, workflow.params, workflow.label);
       this._activeOperation = {
         type: workflow.operation,
-        name: OPERATION_NAMES[workflow.operation],
+        name: this._operationName(workflow.operation),
         seenPreparing: false,
         acceptedAt: Date.now(),
       };
@@ -276,7 +292,7 @@ class ScishareCoffeeDevice extends Homey.Device {
     this._brewTimer = this.homey.setTimeout(() => {
       this._advanceBrewWorkflow().catch(async error => {
         this._clearBrewWorkflow();
-        await this.setWarning(`Приготовление отменено: ${error.message}`);
+        await this.setWarning(this._t('error.workflow_cancelled', { message: error.message }));
         this.error(error);
       });
     }, READY_POLL_MS);
@@ -284,46 +300,46 @@ class ScishareCoffeeDevice extends Homey.Device {
 
   async _run(method, params, label) {
     const reply = await this._call(method, params);
-    if (!Array.isArray(reply) || reply[0] !== 'ok') throw new Error(`${label}: кофемашина не подтвердила команду`);
+    if (!Array.isArray(reply) || reply[0] !== 'ok') throw new Error(this._t('error.command_unconfirmed', { label }));
     this.homey.setTimeout(() => this.poll().catch(error => this.error(error)), 1200);
     return true;
   }
 
   async setPower(value) {
-    return this._run(value ? 'Machine_ON' : 'Machine_OFF', [], value ? 'Включение' : 'Выключение');
+    return this._run(value ? 'Machine_ON' : 'Machine_OFF', [], this._t(value ? 'operation.power_on' : 'operation.power_off'));
   }
 
   async brewEspresso(amount, temperature) {
-    const selectedTemperature = number(temperature, 40, 100, 'Температура');
+    const selectedTemperature = number(temperature, 40, 100, 'field.temperature', this._t.bind(this));
     return this._startBrewWorkflow('Espresso_Coffee', [
-      number(amount, 10, 200, 'Объём'), selectedTemperature,
-    ], 'Приготовление эспрессо', 'espresso');
+      number(amount, 10, 200, 'field.amount', this._t.bind(this)), selectedTemperature,
+    ], this._t('operation.espresso'), 'espresso');
   }
 
   async brewAmericano(totalAmount, coffeeAmount, temperature) {
-    const total = number(totalAmount, 20, 400, 'Общий объём');
-    const coffee = number(coffeeAmount, 10, 200, 'Объём кофе');
+    const total = number(totalAmount, 20, 400, 'field.total_amount', this._t.bind(this));
+    const coffee = number(coffeeAmount, 10, 200, 'field.coffee_amount', this._t.bind(this));
     const water = total - coffee;
-    if (water < 10) throw new Error('Общий объём должен быть минимум на 10 мл больше объёма кофе');
-    const selectedTemperature = number(temperature, 40, 100, 'Температура');
+    if (water < 10) throw new Error(this._t('error.americano_volume'));
+    const selectedTemperature = number(temperature, 40, 100, 'field.temperature', this._t.bind(this));
     return this._startBrewWorkflow('Americano_Coffee', [
       water, selectedTemperature, coffee, selectedTemperature,
-    ], 'Приготовление американо', 'americano');
+    ], this._t('operation.americano'), 'americano');
   }
 
   async boilWater(amount, temperature) {
-    const selectedTemperature = number(temperature, 40, 100, 'Температура');
+    const selectedTemperature = number(temperature, 40, 100, 'field.temperature', this._t.bind(this));
     return this._startBrewWorkflow('Hot_Wate', [
-      number(amount, 10, 400, 'Объём'), selectedTemperature,
-    ], 'Подача горячей воды', 'hot_water');
+      number(amount, 10, 400, 'field.amount', this._t.bind(this)), selectedTemperature,
+    ], this._t('operation.hot_water'), 'hot_water');
   }
 
   async preheat(temperature) {
-    return this._run('Boiler_Preheating_Set', [number(temperature, 40, 100, 'Температура')], 'Нагрев');
+    return this._run('Boiler_Preheating_Set', [number(temperature, 40, 100, 'field.temperature', this._t.bind(this))], this._t('operation.preheat'));
   }
 
   async stopPreheat() {
-    return this._run('Stop_Boiler_Preheat', [], 'Остановка нагрева');
+    return this._run('Stop_Boiler_Preheat', [], this._t('operation.stop_preheat'));
   }
 }
 

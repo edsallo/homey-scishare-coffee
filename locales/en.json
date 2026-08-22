@@ -1,0 +1,69 @@
+{
+  "pair": {
+    "title": "Connect Scishare S1102",
+    "subtitle": "Enter the reserved IP address and the coffee machine's local MiIO token.",
+    "ip_label": "Coffee machine IP address",
+    "ip_placeholder": "For example: 10.0.1.228",
+    "token_label": "MiIO token",
+    "token_placeholder": "32 hexadecimal characters",
+    "submit": "Verify and add",
+    "checking": "Checking local connection…",
+    "device_name": "Scishare Coffee Machine"
+  },
+  "validation": {
+    "ipv4": "Enter a valid local IPv4 address, for example 10.0.1.228",
+    "token": "The MiIO token must contain 32 hexadecimal characters",
+    "wrong_model": "This is not a Scishare S1102: __model__",
+    "unknown_model": "model not detected",
+    "missing_ip": "A valid coffee machine IPv4 address is required",
+    "missing_token": "A valid MiIO token is required",
+    "range": "__title__: value must be between __min__ and __max__"
+  },
+  "field": {
+    "temperature": "Temperature",
+    "amount": "Amount",
+    "total_amount": "Total volume",
+    "coffee_amount": "Coffee volume"
+  },
+  "status": {
+    "off": "Off",
+    "on": "On",
+    "self_check": "Self-check",
+    "preheat_stopped": "Heating stopped",
+    "ready": "Ready to brew",
+    "descale_stopped": "Descaling stopped",
+    "waiting": "Waiting",
+    "heating": "Heating",
+    "brewing": "Brewing",
+    "no_water": "No water",
+    "unknown": "Unknown state (__code__)"
+  },
+  "error": {
+    "unavailable": "Coffee machine unavailable: __message__",
+    "completion_unconfirmed": "Could not confirm that preparation finished within 2 minutes",
+    "workflow_busy": "The coffee machine is already waiting to become ready for another drink",
+    "workflow_timeout": "The coffee machine did not become ready within 2 minutes",
+    "no_water": "Preparation not started: the coffee machine has no water",
+    "already_brewing": "Preparation not started: the coffee machine is already brewing",
+    "workflow_cancelled": "Preparation cancelled: __message__",
+    "command_unconfirmed": "__label__: the coffee machine did not confirm the command",
+    "americano_volume": "The total volume must be at least 10 ml greater than the coffee volume"
+  },
+  "operation": {
+    "power_on": "Powering on coffee machine",
+    "power_off": "Powering off coffee machine",
+    "espresso": "Brewing espresso",
+    "americano": "Brewing americano",
+    "hot_water": "Dispensing hot water",
+    "preheat": "Heating",
+    "stop_preheat": "Stopping heating",
+    "espresso_name": "Espresso",
+    "americano_name": "Americano",
+    "hot_water_name": "Hot water"
+  },
+  "ready_message": {
+    "espresso": "Your espresso is ready!",
+    "americano": "Your americano is ready!",
+    "hot_water": "Your hot water is in the cup!"
+  }
+}

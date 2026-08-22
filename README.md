@@ -19,6 +19,7 @@
 - Быстрые кнопки в карточке устройства: **Эспрессо**, **Американо**, **Горячая вода**.
 - Индивидуальные объём и температура напитков в **Advanced Settings** устройства.
 - Автоматическое включение и нагрев перед подачей напитка или воды.
+- Русский и английский интерфейс приложения, Flow-карточек, настроек и экрана добавления.
 - Триггеры Flow: «В кофемашине закончилась вода» и «Напиток или горячая вода готовы».
 - IP-адрес и MiIO token вводятся только при добавлении устройства либо в его настройках и не хранятся в этом репозитории.
 
@@ -76,6 +77,7 @@ Local LAN control of the **Scishare Smart Capsule Coffee Machine S1102** from Ho
 - Three quick buttons in the device card: **Espresso**, **Americano**, and **Hot water**.
 - Per-drink volume and temperature settings in the device's **Advanced Settings**.
 - Automatic power-on and preheating before dispensing.
+- Russian and English translations for the app interface, Flow cards, settings, and pairing screen.
 - Flow triggers for an empty water tank and for a confirmed completed operation.
 - The local IP address and MiIO token are entered only during pairing or in device settings; they are never stored in this repository.
 

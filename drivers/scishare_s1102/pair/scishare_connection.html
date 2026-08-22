@@ -1,18 +1,18 @@
 <header class="homey-header">
-  <h1 class="homey-title">Подключить Scishare S1102</h1>
-  <p class="homey-subtitle">Введите закреплённый IP-адрес и локальный MiIO token кофемашины.</p>
+  <h1 class="homey-title" data-i18n="pair.title"></h1>
+  <p class="homey-subtitle" data-i18n="pair.subtitle"></p>
 </header>
 
 <form class="homey-form" id="connection-form">
   <div class="homey-form-group">
-    <label class="homey-form-label" for="ip">IP-адрес кофемашины</label>
-    <input class="homey-form-input" id="ip" type="text" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Например: 10.0.1.228" required autofocus>
+    <label class="homey-form-label" for="ip" data-i18n="pair.ip_label"></label>
+    <input class="homey-form-input" id="ip" type="text" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" required autofocus>
   </div>
   <div class="homey-form-group">
-    <label class="homey-form-label" for="token">MiIO token</label>
-    <input class="homey-form-input" id="token" type="password" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="32" maxlength="32" placeholder="32 шестнадцатеричных символа" required>
+    <label class="homey-form-label" for="token" data-i18n="pair.token_label"></label>
+    <input class="homey-form-input" id="token" type="password" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="32" maxlength="32" required>
   </div>
-  <button class="homey-button-primary-full" type="submit">Проверить и добавить</button>
+  <button class="homey-button-primary-full" type="submit" data-i18n="pair.submit"></button>
 </form>
 <p id="status" style="min-height:22px;opacity:.7;margin-top:14px"></p>
 
@@ -21,14 +21,19 @@
   const ip = document.getElementById('ip');
   const token = document.getElementById('token');
   const status = document.getElementById('status');
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    element.textContent = Homey.__(element.dataset.i18n);
+  });
+  ip.placeholder = Homey.__('pair.ip_placeholder');
+  token.placeholder = Homey.__('pair.token_placeholder');
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const values = { ip: ip.value.trim(), token: token.value.trim() };
-    status.textContent = 'Проверяем локальное подключение…';
+    status.textContent = Homey.__('pair.checking');
     try {
       const result = await Homey.emit('verify_connection', values);
       await Homey.createDevice({
-        name: 'Кофемашина Scishare',
+        name: Homey.__('pair.device_name'),
         data: { id: `scishare-s1102-${result.ip.replace(/\\./g, '-')}` },
         settings: { ip: result.ip, token: result.token, poll_interval: 20 }
       });
