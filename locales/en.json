@@ -26,6 +26,7 @@
     "coffee_amount": "Coffee volume"
   },
   "status": {
+    "descaling": "Descaling",
     "off": "Off",
     "on": "On",
     "self_check": "Self-check",
@@ -40,8 +41,10 @@
     "unknown": "Unknown state (__code__)"
   },
   "error": {
+    "temperature_sensor": "NTC temperature sensor fault",
+    "descaling_interrupted": "Descaling interrupted: check power, water and machine status",
     "unavailable": "Coffee machine unavailable: __message__",
-    "completion_unconfirmed": "Could not confirm that preparation finished within 5 minutes",
+    "completion_unconfirmed": "Could not confirm completion within the observation period",
     "confirmation_lost": "Command reply lost. Monitoring preparation without resending the command",
     "workflow_busy": "The coffee machine is already waiting to become ready for another drink",
     "workflow_timeout": "The coffee machine did not become ready within 2 minutes",
@@ -52,6 +55,7 @@
     "americano_volume": "The total volume must be at least 10 ml greater than the coffee volume"
   },
   "operation": {
+    "descaling": "Starting descaling",
     "power_on": "Powering on coffee machine",
     "power_off": "Powering off coffee machine",
     "espresso": "Brewing espresso",
@@ -63,7 +67,11 @@
     "americano_name": "Americano",
     "hot_water_name": "Hot water"
   },
+  "notification": {
+    "no_water": "The coffee machine has run out of water"
+  },
   "ready_message": {
+    "descaling": "Descaling is complete",
     "espresso": "Your espresso is ready!",
     "americano": "Your americano is ready!",
     "hot_water": "Your hot water is in the cup!"

@@ -6,6 +6,7 @@ class ScishareCoffeeApp extends Homey.App {
   async onInit() {
     this.waterEmptyTrigger = this.homey.flow.getDeviceTriggerCard('water_empty');
     this.operationCompletedTrigger = this.homey.flow.getDeviceTriggerCard('operation_completed');
+    this.descalingCompletedTrigger = this.homey.flow.getDeviceTriggerCard('descaling_completed');
     const actions = {
       brew_espresso: ({ device, amount, temperature }) => device.brewEspresso(amount, temperature),
       brew_americano: ({ device, total_amount, coffee_amount, temperature }) => (
@@ -15,6 +16,7 @@ class ScishareCoffeeApp extends Homey.App {
       preheat: ({ device, temperature }) => device.preheat(temperature),
       stop_preheat: ({ device }) => device.stopPreheat(),
       refresh_status: ({ device }) => device.poll(),
+      start_descaling: ({ device }) => device.startDescaling(),
     };
     for (const [id, listener] of Object.entries(actions)) {
       this.homey.flow.getActionCard(id).registerRunListener(listener);

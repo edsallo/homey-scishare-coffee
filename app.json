@@ -1,6 +1,6 @@
 {
   "id": "com.local.scishare-coffee",
-  "version": "0.1.5",
+  "version": "0.1.8",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": ["local"],
@@ -21,8 +21,15 @@
   "flow": {
     "triggers": [
       {
+        "id": "descaling_completed",
+        "title": { "en": "Descaling finished", "ru": "Очистка от накипи завершена" },
+        "tokens": [{ "name": "message", "type": "string", "title": { "en": "Message", "ru": "Сообщение" } }],
+        "args": [{ "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }]
+      },
+      {
         "id": "water_empty",
         "title": { "en": "The coffee machine has run out of water", "ru": "В кофемашине закончилась вода" },
+        "tokens": [{ "name": "message", "type": "string", "title": { "en": "Message", "ru": "Сообщение" } }],
         "args": [
           { "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }
         ]
@@ -40,6 +47,12 @@
       }
     ],
     "actions": [
+      {
+        "id": "start_descaling",
+        "title": { "en": "Start descaling", "ru": "Запустить очистку от накипи" },
+        "hint": { "en": "Prepare the machine according to its manual and place a drain container before starting.", "ru": "Перед запуском подготовьте машину по инструкции и поставьте ёмкость для слива." },
+        "args": [{ "type": "device", "name": "device", "filter": "driver_id=scishare_s1102", "title": { "en": "Coffee machine", "ru": "Кофемашина" } }]
+      },
       {
         "id": "brew_espresso",
         "title": { "en": "Brew espresso", "ru": "Приготовить эспрессо" },
@@ -110,8 +123,9 @@
         "small": "/drivers/scishare_s1102/assets/images/small.png",
         "xlarge": "/drivers/scishare_s1102/assets/images/xlarge.png"
       },
-      "capabilities": ["onoff", "alarm_generic", "button.espresso", "button.americano", "button.hot_water"],
+      "capabilities": ["onoff", "alarm_generic", "button.espresso", "button.americano", "button.hot_water", "button.descaling"],
       "capabilitiesOptions": {
+        "button.descaling": { "title": { "en": "Descaling", "ru": "Очистка от накипи" } },
         "button.espresso": { "title": { "en": "Espresso", "ru": "Эспрессо" } },
         "button.americano": { "title": { "en": "Americano", "ru": "Американо" } },
         "button.hot_water": { "title": { "en": "Hot water", "ru": "Горячая вода" } }

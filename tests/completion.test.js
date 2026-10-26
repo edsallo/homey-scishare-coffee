@@ -34,6 +34,66 @@ function fixture() {
   return { d, timers, events, calls, advance: ms => { now += ms; } };
 }
 
+test('water-empty trigger includes message and fires only once until water fault clears', async () => {
+  const f = fixture();
+  const waterEvents = [];
+  f.d.homey.app.waterEmptyTrigger = { trigger: async (_, tokens) => waterEvents.push(tokens) };
+  f.d.setCapabilityValue = f.d.setStoreValue = async () => {};
+  let code = 203;
+  f.d._call = async () => ['ok', code];
+  const read = Object.getPrototypeOf(f.d)._readStatus.bind(f.d);
+  await read();
+  await read();
+  assert.equal(waterEvents.length, 1);
+  assert.equal(waterEvents[0].message, 'notification.no_water');
+  code = 5;
+  await read();
+  code = 203;
+  await read();
+  assert.equal(waterEvents.length, 2);
+});
+
+test('descaling sends once, requires 6 then 5, emits only cleaning completion', async () => {
+  const f = fixture();
+  let cleaned = 0;
+  f.d.homey.app.descalingCompletedTrigger = { trigger: async (_, tokens) => {
+    cleaned++;
+    assert.equal(tokens.message, 'ready_message.descaling');
+  } };
+  await f.d.startDescaling();
+  f.advance(5000);
+  await f.d._observeActiveOperation(4);
+  await f.d._observeActiveOperation(5);
+  assert.equal(cleaned, 0);
+  await f.d._observeActiveOperation(6);
+  await f.d._observeActiveOperation(5);
+  await f.d._observeActiveOperation(5);
+  assert.equal(cleaned, 1);
+  assert.equal(f.events.length, 0);
+  assert.deepEqual(f.calls, ['Machine_Descaling']);
+  assert.ok(f.timers.some(t => t.ms === 900000));
+});
+
+test('descaling lost reply is observed without resending; no water cancels', async () => {
+  const f = fixture();
+  f.d._run = async method => { f.calls.push(method); throw timeout(true); };
+  await f.d.startDescaling();
+  await f.d._observeActiveOperation(6);
+  await f.d._observeActiveOperation(203);
+  assert.equal(f.d._activeOperation, null);
+  assert.equal(f.events.length, 0);
+  assert.deepEqual(f.calls, ['Machine_Descaling']);
+});
+
+test('descaling wakes sleeping machine and blocks drinks during cleaning', async () => {
+  const f = fixture();
+  const states = [1, 2];
+  f.d._readStatus = async () => states.shift();
+  await f.d.startDescaling();
+  assert.deepEqual(f.calls, ['Machine_ON', 'Machine_Descaling']);
+  await assert.rejects(f.d.brewEspresso(40, 90), /workflow_busy/);
+});
+
 test('lost acknowledgement: sends once and emits ready once after 51 → 5', async () => {
   const f = fixture();
   f.d._run = async method => { f.calls.push(method); throw timeout(true); };

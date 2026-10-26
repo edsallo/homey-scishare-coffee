@@ -4,8 +4,8 @@ const Homey = require('homey');
 const MiioClient = require('../../lib/miio-client');
 
 const STATUS_KEYS = {
-  1: 'status.off', 2: 'status.on', 3: 'status.self_check', 4: 'status.preheat_stopped',
-  5: 'status.ready', 6: 'status.descale_stopped', 7: 'status.waiting',
+  1: 'status.off', 2: 'status.on', 3: 'status.self_check', 4: 'status.heating',
+  5: 'status.ready', 6: 'status.descaling', 7: 'status.waiting',
   8: 'status.heating', 51: 'status.preparing', 201: 'status.brewing', 203: 'status.no_water',
 };
 const READY_TIMEOUT_MS = 120000;
@@ -15,6 +15,7 @@ const ACTIVE_POLL_DURATION_MS = 300000;
 const BREWING_CODES = new Set([51, 201]);
 const TRANSIENT_ERRORS = new Set(['ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'ECONNRESET', 'ECONNREFUSED']);
 const OPERATION_NAME_KEYS = {
+  descaling: 'operation.descaling',
   espresso: 'operation.espresso_name',
   americano: 'operation.americano_name',
   hot_water: 'operation.hot_water_name',
@@ -76,6 +77,7 @@ class ScishareCoffeeDevice extends Homey.Device {
       await this.setStoreValue('water_trigger_version', 2);
     }
     await this._ensureQuickDrinkButtons();
+    this.registerCapabilityListener('button.descaling', async () => this.startDescaling());
     this.registerCapabilityListener('onoff', async value => this.setPower(value));
     this.registerCapabilityListener('button.espresso', async () => this.brewEspresso(
       this.getSetting('espresso_amount'), this.getSetting('espresso_temperature'),
@@ -94,7 +96,7 @@ class ScishareCoffeeDevice extends Homey.Device {
   }
 
   async _ensureQuickDrinkButtons() {
-    for (const capability of ['button.espresso', 'button.americano', 'button.hot_water']) {
+    for (const capability of ['button.espresso', 'button.americano', 'button.hot_water', 'button.descaling']) {
       if (!this.hasCapability(capability)) await this.addCapability(capability);
     }
   }
@@ -117,7 +119,7 @@ class ScishareCoffeeDevice extends Homey.Device {
         this.setWarning(this._t('error.completion_unconfirmed')).catch(error => this.error(error));
         this._activeOperation = null;
       }
-    }, ACTIVE_POLL_DURATION_MS);
+    }, this._activeOperation?.type === 'descaling' ? 15 * 60 * 1000 : ACTIVE_POLL_DURATION_MS);
   }
 
   stopActivePolling() {
@@ -189,7 +191,9 @@ class ScishareCoffeeDevice extends Homey.Device {
     await this.setStoreValue('status_code', code);
     await this.setStoreValue('status_text', this._statusText(code));
     if (code === 203 && !this._waterEmptyReported) {
-      await this.homey.app.waterEmptyTrigger.trigger(this);
+      await this.homey.app.waterEmptyTrigger.trigger(this, {
+        message: this._t('notification.no_water'),
+      });
       this._waterEmptyReported = true;
       await this.setStoreValue('water_empty_reported', true);
     } else if (code !== 203 && this._waterEmptyReported) {
@@ -206,6 +210,23 @@ class ScishareCoffeeDevice extends Homey.Device {
     if (operation.lastCode !== code) {
       this._trace('status', { code, type: operation.type, confirmed: operation.confirmed });
       operation.lastCode = code;
+    }
+    if (operation.type === 'descaling') {
+      if (code === 6) operation.seenPreparing = true;
+      if (code === 203 || code === 202 || (code === 1 && operation.seenPreparing)) {
+        this._activeOperation = null;
+        this.stopActivePolling();
+        await this.setWarning(this._t('error.descaling_interrupted'));
+      } else if (code === 5 && operation.seenPreparing && !operation.awaitingReply) {
+        this._activeOperation = null;
+        this.stopActivePolling();
+        await this.homey.app.descalingCompletedTrigger.trigger(this, {
+          message: this._t('ready_message.descaling'),
+        });
+        this._trace('descaling_completed');
+        await this.unsetWarning();
+      }
+      return;
     }
     if (BREWING_CODES.has(code)) {
       operation.seenPreparing = true;
@@ -322,7 +343,8 @@ class ScishareCoffeeDevice extends Homey.Device {
       return;
     }
     if (code === 203) throw new Error(this._t('error.no_water'));
-    if (BREWING_CODES.has(code)) throw new Error(this._t('error.already_brewing'));
+    if (BREWING_CODES.has(code) || code === 6) throw new Error(this._t('error.already_brewing'));
+    if (code === 202) throw new Error(this._t('error.temperature_sensor'));
     if (code === 5) {
       return this._dispatchDrink(workflow);
     }
@@ -370,6 +392,10 @@ class ScishareCoffeeDevice extends Homey.Device {
 
   async setPower(value) {
     return this._run(value ? 'Machine_ON' : 'Machine_OFF', [], this._t(value ? 'operation.power_on' : 'operation.power_off'));
+  }
+
+  async startDescaling() {
+    return this._startBrewWorkflow('Machine_Descaling', [], this._t('operation.descaling'), 'descaling');
   }
 
   async brewEspresso(amount, temperature) {

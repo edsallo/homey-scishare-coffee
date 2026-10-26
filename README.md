@@ -10,6 +10,14 @@
 
 ## Русская версия
 
+### Очистка от накипи (0.1.6)
+
+Перед запуском подготовьте машину по инструкции производителя и поставьте ёмкость для слива. Кнопка **Очистка от накипи** и Flow-действие **Запустить очистку от накипи** включают спящую машину и отправляют `Machine_Descaling` один раз. При потере ответа повторного запуска нет. Завершение подтверждается только переходом 6 → 5 и вызывает отдельный триггер **Очистка от накипи завершена**, а не уведомление о напитке. Наблюдение ограничено 15 минутами; отключение питания или нехватка воды прерывают отслеживание без сигнала готовности. Автоматическая остановка очистки не реализована.
+
+### Descaling (0.1.6)
+
+Prepare the machine according to its manual and place a drain container first. The **Descaling** device button and **Start descaling** Flow action wake the machine and send `Machine_Descaling` once, without retrying a lost acknowledgement. Only the observed 6 → 5 transition fires the separate **Descaling finished** trigger. Monitoring lasts up to 15 minutes; power-off or a water fault cancels tracking without a completion event. Automatic cancellation of the machine's cleaning cycle is not implemented.
+
 Локальное управление кофемашиной **Scishare Smart Capsule Coffee Machine S1102** из Homey Pro. Приложение работает напрямую с кофемашиной по локальной сети через протокол MiIO UDP: после добавления не требует Xiaomi Cloud или постоянного доступа в интернет.
 
 ### Возможности
