@@ -18,6 +18,9 @@
 - Приготовление эспрессо, американо и подача горячей воды из Flow.
 - Быстрые кнопки в карточке устройства: **Эспрессо**, **Американо**, **Горячая вода**.
 - Индивидуальные объём и температура напитков в **Advanced Settings** устройства.
+- Настраиваемые фразы готовности для эспрессо, американо и горячей воды в **Advanced Settings**. Пустое поле сохраняет стандартную фразу на языке Homey; текст передаётся в Flow тегом «Сообщение о готовности» для голоса и push.
+- При потере подтверждения отправленной команды приложение продолжает отслеживание без повторного запуска приготовления. Ожидание завершения — до пяти минут; после потери подтверждения требуется наблюдаемый переход приготовления в готовность.
+- Обновлённые контурные SVG-иконки кофемашины.
 - Автоматическое включение и нагрев перед подачей напитка или воды.
 - Русский и английский интерфейс приложения, Flow-карточек, настроек и экрана добавления.
 - Триггеры Flow: «В кофемашине закончилась вода» и «Напиток или горячая вода готовы».
@@ -76,6 +79,9 @@ Local LAN control of the **Scishare Smart Capsule Coffee Machine S1102** from Ho
 - Brew espresso, americano, or dispense hot water from Flow.
 - Three quick buttons in the device card: **Espresso**, **Americano**, and **Hot water**.
 - Per-drink volume and temperature settings in the device's **Advanced Settings**.
+- Custom ready messages for espresso, americano and hot water in **Advanced Settings**. Empty fields use the default message in Homey's language. Flow receives the text through the Ready message token for speech and push notifications.
+- A lost acknowledgement of a sent drink command keeps completion monitoring active without sending the drink command again. Monitoring lasts up to five minutes; uncertain commands require an observed preparation-to-ready transition.
+- Updated outline SVG coffee machine icons.
 - Automatic power-on and preheating before dispensing.
 - Russian and English translations for the app interface, Flow cards, settings, and pairing screen.
 - Flow triggers for an empty water tank and for a confirmed completed operation.

@@ -6,12 +6,14 @@ const MiioClient = require('../../lib/miio-client');
 const STATUS_KEYS = {
   1: 'status.off', 2: 'status.on', 3: 'status.self_check', 4: 'status.preheat_stopped',
   5: 'status.ready', 6: 'status.descale_stopped', 7: 'status.waiting',
-  8: 'status.heating', 201: 'status.brewing', 203: 'status.no_water',
+  8: 'status.heating', 51: 'status.preparing', 201: 'status.brewing', 203: 'status.no_water',
 };
 const READY_TIMEOUT_MS = 120000;
 const READY_POLL_MS = 2000;
 const ACTIVE_POLL_MS = 2000;
-const ACTIVE_POLL_DURATION_MS = 120000;
+const ACTIVE_POLL_DURATION_MS = 300000;
+const BREWING_CODES = new Set([51, 201]);
+const TRANSIENT_ERRORS = new Set(['ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH', 'ECONNRESET', 'ECONNREFUSED']);
 const OPERATION_NAME_KEYS = {
   espresso: 'operation.espresso_name',
   americano: 'operation.americano_name',
@@ -33,6 +35,17 @@ function number(value, min, max, title, translate) {
 }
 
 class ScishareCoffeeDevice extends Homey.Device {
+  _trace(event, details = {}) {
+    const entry = { time: new Date().toISOString(), event, ...details };
+    this.log('Completion tracking', JSON.stringify(entry));
+    if (!this.homey.settings || !this.getData) return;
+    const key = 'completion_diagnostics_' + this.getData().id;
+    try {
+      const rows = this.homey.settings.get(key) || [];
+      this.homey.settings.set(key, [...rows.slice(-79), entry]);
+    } catch (error) { this.error('Could not save completion diagnostics', error); }
+  }
+
   _t(key, tokens) {
     return this.homey.__(key, tokens);
   }
@@ -46,6 +59,8 @@ class ScishareCoffeeDevice extends Homey.Device {
   }
 
   _readyMessage(type) {
+    const custom = this.getSetting('ready_message_' + type);
+    if (typeof custom === 'string' && custom.trim()) return custom.trim();
     return this._t(OPERATION_READY_MESSAGE_KEYS[type]);
   }
 
@@ -73,8 +88,9 @@ class ScishareCoffeeDevice extends Homey.Device {
     this.registerCapabilityListener('button.hot_water', async () => this.boilWater(
       this.getSetting('hot_water_amount'), this.getSetting('hot_water_temperature'),
     ));
-    await this.poll();
     this.startPolling();
+    // A missed first UDP reply must not prevent all future status polling.
+    await this.poll().catch(error => this.error(error));
   }
 
   async _ensureQuickDrinkButtons() {
@@ -97,6 +113,7 @@ class ScishareCoffeeDevice extends Homey.Device {
       clearInterval(this.activePollTimer);
       this.activePollTimer = null;
       if (this._activeOperation) {
+        this._trace('tracking_timeout', { type: this._activeOperation.type });
         this.setWarning(this._t('error.completion_unconfirmed')).catch(error => this.error(error));
         this._activeOperation = null;
       }
@@ -186,7 +203,11 @@ class ScishareCoffeeDevice extends Homey.Device {
   async _observeActiveOperation(code) {
     const operation = this._activeOperation;
     if (!operation) return;
-    if (code === 201) {
+    if (operation.lastCode !== code) {
+      this._trace('status', { code, type: operation.type, confirmed: operation.confirmed });
+      operation.lastCode = code;
+    }
+    if (BREWING_CODES.has(code)) {
       operation.seenPreparing = true;
       return;
     }
@@ -195,21 +216,33 @@ class ScishareCoffeeDevice extends Homey.Device {
       this.stopActivePolling();
       return;
     }
+    if (operation.awaitingReply) return;
+    // During cold boot the firmware can still answer Off after accepting
+    // a queued drink. Only treat Off as cancellation after preparation began.
+    if (code === 1 && operation.seenPreparing) {
+      this._trace('cancelled_off', { type: operation.type });
+      this._activeOperation = null;
+      this.stopActivePolling();
+      return;
+    }
     // Small water portions can be completed between two 2-second polls. The
     // command acknowledgement plus a later Ready state is then the reliable
     // completion signal even when status 201 was never observed.
-    if (code === 5 && (operation.seenPreparing || Date.now() - operation.acceptedAt >= 1000)) {
+    if (code === 5 && (operation.seenPreparing || (operation.confirmed && Date.now() - operation.acceptedAt >= 1000))) {
       this._activeOperation = null;
       this.stopActivePolling();
       await this.homey.app.operationCompletedTrigger.trigger(this, {
         operation: operation.name,
         message: this._readyMessage(operation.type),
       });
+      this._trace('ready_sent', { type: operation.type });
+      await this.unsetWarning();
     }
   }
 
   async _startBrewWorkflow(method, params, label, operation) {
-    if (this._brewWorkflow) throw new Error(this._t('error.workflow_busy'));
+    if (this._brewWorkflow || this._activeOperation) throw new Error(this._t('error.workflow_busy'));
+    this._trace('requested', { type: operation });
     this._brewWorkflow = {
       method, params, label, operation,
       deadline: Date.now() + READY_TIMEOUT_MS, turnedOn: false,
@@ -218,6 +251,7 @@ class ScishareCoffeeDevice extends Homey.Device {
       await this._advanceBrewWorkflow();
       return true;
     } catch (error) {
+      this._trace('startup_failed', { code: error.code, message: error.message });
       this._clearBrewWorkflow();
       throw error;
     }
@@ -229,73 +263,102 @@ class ScishareCoffeeDevice extends Homey.Device {
     this._brewWorkflow = null;
   }
 
+  async _dispatchDrink(workflow) {
+    const operation = {
+      type: workflow.operation,
+      name: this._operationName(workflow.operation),
+      seenPreparing: false,
+      confirmed: false,
+      awaitingReply: true,
+      acceptedAt: Date.now(),
+    };
+    this._activeOperation = operation;
+    this._trace('dispatch', { type: operation.type });
+    // Clear the startup workflow BEFORE sending. No timer or subsequent
+    // status read is allowed to send this drink command again.
+    this._clearBrewWorkflow();
+    try {
+      await this._run(workflow.method, workflow.params, workflow.label);
+      operation.confirmed = true;
+      this._trace('acknowledged', { type: operation.type });
+      await this.unsetWarning();
+    } catch (error) {
+      if (error.code !== 'ETIMEDOUT' || !error.requestSent) {
+        this._trace('dispatch_failed', { type: operation.type, code: error.code, requestSent: error.requestSent });
+        if (this._activeOperation === operation) this._activeOperation = null;
+        throw error;
+      }
+      this.log('Drink reply lost; observing status without resending', workflow.operation);
+      this._trace('reply_lost', { type: operation.type });
+      await this.setWarning(this._t('error.confirmation_lost'));
+    } finally {
+      operation.awaitingReply = false;
+    }
+    if (this._activeOperation === operation) this.startActivePolling();
+  }
+
+  _scheduleBrewWorkflow() {
+    this._brewTimer = this.homey.setTimeout(() => {
+      this._advanceBrewWorkflow().catch(async error => {
+        this._trace('startup_failed', { code: error.code, message: error.message });
+        this._clearBrewWorkflow();
+        await this.setWarning(this._t('error.workflow_cancelled', { message: error.message }));
+        this.error(error);
+      });
+    }, READY_POLL_MS);
+  }
+
   async _advanceBrewWorkflow() {
     const workflow = this._brewWorkflow;
     if (!workflow) return;
     if (Date.now() >= workflow.deadline) throw new Error(this._t('error.workflow_timeout'));
 
-    const code = await this._readStatus();
-    if (code === 203) throw new Error(this._t('error.no_water'));
-    if (code === 201) throw new Error(this._t('error.already_brewing'));
-    if (code === 5) {
-      await this._run(workflow.method, workflow.params, workflow.label);
-      this._activeOperation = {
-        type: workflow.operation,
-        name: this._operationName(workflow.operation),
-        seenPreparing: false,
-        acceptedAt: Date.now(),
-      };
-      this.startActivePolling();
-      this._clearBrewWorkflow();
-      await this.unsetWarning();
+    let code;
+    try {
+      code = await this._readStatus();
+    } catch (error) {
+      if (!TRANSIENT_ERRORS.has(error.code)) throw error;
+      this._scheduleBrewWorkflow();
       return;
+    }
+    if (code === 203) throw new Error(this._t('error.no_water'));
+    if (BREWING_CODES.has(code)) throw new Error(this._t('error.already_brewing'));
+    if (code === 5) {
+      return this._dispatchDrink(workflow);
     }
 
     if (code === 1 && !workflow.turnedOn) {
-      await this._run('Machine_ON', [], this._t('operation.power_on'));
       workflow.turnedOn = true;
+      try {
+        await this._run('Machine_ON', [], this._t('operation.power_on'));
+      } catch (error) {
+        if (!TRANSIENT_ERRORS.has(error.code)) throw error;
+        this._scheduleBrewWorkflow();
+        return;
+      }
       // Do not wait for the regular two-second workflow poll here. Send the
       // requested operation at the first post-boot idle state; S1102 may
       // still queue it behind its firmware-controlled initial warm-up.
-      const postPowerOnCode = await this._readStatus();
-      if ([2, 4, 5, 7].includes(postPowerOnCode)) {
-        await this._run(workflow.method, workflow.params, workflow.label);
-        this._activeOperation = {
-          type: workflow.operation,
-          name: this._operationName(workflow.operation),
-          seenPreparing: false,
-          acceptedAt: Date.now(),
-        };
-        this.startActivePolling();
-        this._clearBrewWorkflow();
-        await this.unsetWarning();
+      let postPowerOnCode;
+      try {
+        postPowerOnCode = await this._readStatus();
+      } catch (error) {
+        if (!TRANSIENT_ERRORS.has(error.code)) throw error;
+        this._scheduleBrewWorkflow();
         return;
+      }
+      if ([2, 4, 5, 7].includes(postPowerOnCode)) {
+        return this._dispatchDrink(workflow);
       }
     }
 
     // The drink/water command includes its target temperature. A separate
     // Boiler_Preheating_Set command is deliberately not sent beforehand.
     if ([2, 4, 7].includes(code)) {
-      await this._run(workflow.method, workflow.params, workflow.label);
-      this._activeOperation = {
-        type: workflow.operation,
-        name: this._operationName(workflow.operation),
-        seenPreparing: false,
-        acceptedAt: Date.now(),
-      };
-      this.startActivePolling();
-      this._clearBrewWorkflow();
-      await this.unsetWarning();
-      return;
+      return this._dispatchDrink(workflow);
     }
 
-    this._brewTimer = this.homey.setTimeout(() => {
-      this._advanceBrewWorkflow().catch(async error => {
-        this._clearBrewWorkflow();
-        await this.setWarning(this._t('error.workflow_cancelled', { message: error.message }));
-        this.error(error);
-      });
-    }, READY_POLL_MS);
+    this._scheduleBrewWorkflow();
   }
 
   async _run(method, params, label) {

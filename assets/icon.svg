@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Coffee machine">
-  <g fill="#000">
-    <path d="M98 56h254v124H178v190h-22V78h-36v292H98V56Z"/>
-    <path d="M330 56h22v124H178v-22h152V56Z"/>
-    <path fill-rule="evenodd" d="M352 94h18c15 0 28 13 28 28v26c0 15-13 28-28 28h-18v-18h18c5 0 10-5 10-10v-26c0-5-5-10-10-10h-18V94Z"/>
-    <path d="M178 180h28v32h96v-32h50v20h-30v32H186v-32h-8v-20Z"/>
-    <path d="M206 232h96v20h-96zM232 252h44v18h-44z"/>
-    <path fill-rule="evenodd" d="M198 270h126v48c0 34-28 62-62 62h-2c-34 0-62-28-62-62v-48Zm20 20v28c0 23 19 42 42 42h2c23 0 42-19 42-42v-28h-86Z"/>
-    <path fill-rule="evenodd" d="M324 282h20c25 0 46 20 46 46s-21 46-46 46h-20v-20h20c14 0 26-12 26-26s-12-26-26-26h-20v-20Z"/>
-    <path fill-rule="evenodd" d="M72 368h330c9 0 16 7 16 16v40c0 9-7 16-16 16H72c-9 0-16-7-16-16v-40c0-9 7-16 16-16Zm4 20v32h322v-32H76Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="960" viewBox="0 0 960 960">
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="20" transform="translate(-19.2 -134.4) scale(1.04 1.28)">
+    <path d="M141 192 Q185 211 269 211 H740 Q759 211 759 232 V790 Q759 809 741 809 H329 Q309 809 309 789 V494 C309 467 289 449 260 446 C197 440 151 415 99 401 L104 367 Q117 263 141 192 Z"/>
+    <path d="M69 479 H244 L232 629 Q227 678 193 689 H124 Q89 681 84 633 Z"/>
+    <path d="M83 533 H237"/>
+    <path d="M62 700 H289 Q309 702 309 718 V775 H220 Q203 775 203 758 Q203 735 180 730 L83 720 Q62 717 62 700 Z"/>
+    <path d="M759 307 H897 V779 Q897 801 877 803 H759"/>
+    <path d="M759 506 H897 M759 756 H897"/>
+    <path d="M679 185 V157 Q679 149 687 149 H717 Q725 149 725 157 V185 M670 211 V194 Q670 185 679 185 H725 Q734 185 734 194 V211"/>
   </g>
 </svg>

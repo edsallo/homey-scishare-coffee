@@ -35,12 +35,14 @@
     "waiting": "Waiting",
     "heating": "Heating",
     "brewing": "Brewing",
+    "preparing": "Preparing drink",
     "no_water": "No water",
     "unknown": "Unknown state (__code__)"
   },
   "error": {
     "unavailable": "Coffee machine unavailable: __message__",
-    "completion_unconfirmed": "Could not confirm that preparation finished within 2 minutes",
+    "completion_unconfirmed": "Could not confirm that preparation finished within 5 minutes",
+    "confirmation_lost": "Command reply lost. Monitoring preparation without resending the command",
     "workflow_busy": "The coffee machine is already waiting to become ready for another drink",
     "workflow_timeout": "The coffee machine did not become ready within 2 minutes",
     "no_water": "Preparation not started: the coffee machine has no water",

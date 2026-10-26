@@ -1,6 +1,6 @@
 {
   "id": "com.local.scishare-coffee",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": ["local"],
@@ -127,7 +127,10 @@
         { "id": "americano_coffee_amount", "type": "number", "label": { "en": "Americano coffee volume (ml)", "ru": "Американо: объём кофе (мл)" }, "value": 40 },
         { "id": "americano_temperature", "type": "number", "label": { "en": "Americano temperature (°C)", "ru": "Американо: температура (°C)" }, "value": 90 },
         { "id": "hot_water_amount", "type": "number", "label": { "en": "Hot water volume (ml)", "ru": "Горячая вода: объём (мл)" }, "value": 200 },
-        { "id": "hot_water_temperature", "type": "number", "label": { "en": "Hot water temperature (°C)", "ru": "Горячая вода: температура (°C)" }, "value": 90 }
+        { "id": "hot_water_temperature", "type": "number", "label": { "en": "Hot water temperature (°C)", "ru": "Горячая вода: температура (°C)" }, "value": 90 },
+        { "id": "ready_message_espresso", "type": "text", "label": { "en": "Espresso: ready message", "ru": "Эспрессо: фраза готовности" }, "hint": { "en": "Text passed to Flow for speech and push. Leave empty for the default message.", "ru": "Текст для голоса и push через Flow. Оставьте пустым для стандартной фразы." }, "value": "" },
+        { "id": "ready_message_americano", "type": "text", "label": { "en": "Americano: ready message", "ru": "Американо: фраза готовности" }, "hint": { "en": "Text passed to Flow for speech and push. Leave empty for the default message.", "ru": "Текст для голоса и push через Flow. Оставьте пустым для стандартной фразы." }, "value": "" },
+        { "id": "ready_message_hot_water", "type": "text", "label": { "en": "Hot water: ready message", "ru": "Горячая вода: фраза готовности" }, "hint": { "en": "Text passed to Flow for speech and push. Leave empty for the default message.", "ru": "Текст дляголоса и push через Flow. Оставьте пустым для стандартной фразы." }, "value": "" }
       ]
     }
   ]
